@@ -5,6 +5,7 @@ mod ui;
 
 use std::io;
 use std::os::unix::process::CommandExt;
+use std::path::PathBuf;
 use std::process::Command;
 
 use crossterm::{
@@ -17,7 +18,15 @@ use ratatui::Terminal;
 use app::{App, AppResult};
 
 fn main() {
-    let sessions = match db::query_sessions() {
+    // Check for --db <path> argument
+    let args: Vec<String> = std::env::args().collect();
+    let db_override = if let Some(pos) = args.iter().position(|a| a == "--db") {
+        args.get(pos + 1).map(|p| PathBuf::from(p))
+    } else {
+        None
+    };
+
+    let sessions = match db::query_sessions(db_override.as_deref()) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("Error: {e}");

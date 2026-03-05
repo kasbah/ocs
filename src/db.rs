@@ -1,5 +1,5 @@
 use rusqlite::{Connection, OpenFlags};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct Session {
@@ -22,8 +22,19 @@ pub fn db_path() -> Result<PathBuf, String> {
 }
 
 /// Query top-level sessions with the last user text input for each.
-pub fn query_sessions() -> Result<Vec<Session>, String> {
-    let path = db_path()?;
+/// If `db_override` is provided, use that path instead of the default.
+pub fn query_sessions(db_override: Option<&Path>) -> Result<Vec<Session>, String> {
+    let path = match db_override {
+        Some(p) => {
+            if p.exists() {
+                p.to_path_buf()
+            } else {
+                return Err(format!("Database not found at {}", p.display()));
+            }
+        }
+        None => db_path()?,
+    };
+
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .map_err(|e| format!("Failed to open database: {e}"))?;
 
