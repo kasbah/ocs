@@ -58,6 +58,7 @@ fn main() {
                 KeyCode::Backspace => app.backspace(),
                 KeyCode::Up => app.move_up(),
                 KeyCode::Down => app.move_down(),
+                KeyCode::F(2) => app.toggle_sort(),
                 KeyCode::Char(c) => app.type_char(c),
                 _ => {}
             }

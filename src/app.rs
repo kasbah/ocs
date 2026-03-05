@@ -12,24 +12,26 @@ pub struct App {
     pub filtered: Vec<ScoredSession>,
     pub query: String,
     pub selected: usize,
+    pub sort_by_date: bool,
     pub result: Option<AppResult>,
 }
 
 impl App {
     pub fn new(sessions: Vec<Session>) -> Self {
-        let filtered = filter_sessions(&sessions, "");
+        let filtered = filter_sessions(&sessions, "", false);
         App {
             sessions,
             filtered,
             query: String::new(),
             selected: 0,
+            sort_by_date: false,
             result: None,
         }
     }
 
-    /// Re-filter sessions based on current query.
+    /// Re-filter sessions based on current query and sort mode.
     fn update_filter(&mut self) {
-        self.filtered = filter_sessions(&self.sessions, &self.query);
+        self.filtered = filter_sessions(&self.sessions, &self.query, self.sort_by_date);
         // Clamp selection
         if self.filtered.is_empty() {
             self.selected = 0;
@@ -47,6 +49,12 @@ impl App {
     /// Delete the last character from the query.
     pub fn backspace(&mut self) {
         self.query.pop();
+        self.update_filter();
+    }
+
+    /// Toggle between sort-by-score and sort-by-date.
+    pub fn toggle_sort(&mut self) {
+        self.sort_by_date = !self.sort_by_date;
         self.update_filter();
     }
 

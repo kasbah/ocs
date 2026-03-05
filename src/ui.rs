@@ -120,11 +120,19 @@ fn draw_table(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let count = app.filtered.len();
     let total = app.sessions.len();
+
+    let sort_label = if app.sort_by_date { "date" } else { "score" };
+
     let status = Line::from(vec![
         Span::styled(
-            format!(" {count}/{total} sessions"),
+            format!(" {count}/{total}"),
             Style::default().fg(Color::DarkGray),
         ),
+        Span::styled(
+            format!("  sort: {sort_label} (F2)"),
+            Style::default().fg(Color::DarkGray),
+        ),
+        Span::styled("  title: mes: dir:", Style::default().fg(Color::DarkGray)),
         Span::styled(
             "  Enter: open  Esc: quit",
             Style::default().fg(Color::DarkGray),
