@@ -9,6 +9,10 @@ use ratatui::{
 
 use crate::app::App;
 
+const MATCH_BG: Color = Color::DarkGray;
+const SELECTED_BG: Color = Color::Rgb(180, 90, 0); // dark orange
+const SELECTED_MATCH_BG: Color = Color::Rgb(120, 60, 0); // darker orange for matches on selected row
+
 /// Shorten an absolute path by replacing the home directory prefix with `~`.
 fn shorten_path(path: &str) -> String {
     if let Some(home) = dirs::home_dir() {
@@ -31,6 +35,52 @@ fn format_date(epoch_ms: i64) -> String {
         }
         None => "unknown".to_string(),
     }
+}
+
+/// Build a Line with matched character indices highlighted.
+/// `base_style` is applied to non-highlighted characters.
+fn highlighted_line<'a>(
+    text: &str,
+    indices: &[usize],
+    base_style: Style,
+    selected: bool,
+) -> Line<'a> {
+    let match_bg = if selected {
+        SELECTED_MATCH_BG
+    } else {
+        MATCH_BG
+    };
+    let highlight_style = base_style
+        .bg(match_bg)
+        .fg(Color::White)
+        .add_modifier(Modifier::BOLD);
+
+    if indices.is_empty() {
+        return Line::from(Span::styled(text.to_string(), base_style));
+    }
+
+    let mut spans = Vec::new();
+    let mut last = 0;
+
+    for &idx in indices {
+        // Translate byte-safe: indices are char indices, so iterate chars
+        let char_start = text.char_indices().nth(idx);
+        if let Some((byte_pos, ch)) = char_start {
+            // Add any text before this match
+            if byte_pos > last {
+                spans.push(Span::styled(text[last..byte_pos].to_string(), base_style));
+            }
+            spans.push(Span::styled(ch.to_string(), highlight_style));
+            last = byte_pos + ch.len_utf8();
+        }
+    }
+
+    // Remainder after last match
+    if last < text.len() {
+        spans.push(Span::styled(text[last..].to_string(), base_style));
+    }
+
+    Line::from(spans)
 }
 
 pub fn draw(frame: &mut Frame, app: &App) {
@@ -83,21 +133,39 @@ fn draw_table(frame: &mut Frame, app: &App, area: Rect) {
         .enumerate()
         .map(|(i, scored)| {
             let s = &scored.session;
-            let style = if i == app.selected {
-                Style::default()
-                    .bg(Color::DarkGray)
-                    .fg(Color::White)
-                    .add_modifier(Modifier::BOLD)
+            let is_selected = i == app.selected;
+            let base_style = if is_selected {
+                Style::default().bg(SELECTED_BG).fg(Color::White)
             } else {
                 Style::default()
             };
+
+            let dir_display = shorten_path(&s.directory);
+            // Directory indices are against the original path; remap to shortened
+            let dir_indices =
+                remap_dir_indices(&s.directory, &dir_display, &scored.indices.directory);
+
             Row::new(vec![
-                Cell::from(s.title.clone()),
-                Cell::from(s.last_input.clone()),
-                Cell::from(shorten_path(&s.directory)),
-                Cell::from(format_date(s.time_created)),
+                Cell::from(highlighted_line(
+                    &s.title,
+                    &scored.indices.title,
+                    base_style,
+                    is_selected,
+                )),
+                Cell::from(highlighted_line(
+                    &s.last_input,
+                    &scored.indices.last_input,
+                    base_style,
+                    is_selected,
+                )),
+                Cell::from(highlighted_line(
+                    &dir_display,
+                    &dir_indices,
+                    base_style,
+                    is_selected,
+                )),
+                Cell::from(Span::styled(format_date(s.time_created), base_style)),
             ])
-            .style(style)
         })
         .collect();
 
@@ -115,6 +183,42 @@ fn draw_table(frame: &mut Frame, app: &App, area: Rect) {
     );
 
     frame.render_widget(table, area);
+}
+
+/// Remap match indices from the original directory path to the shortened display path.
+/// The shortened path replaces `/home/user` with `~`, so indices shift accordingly.
+fn remap_dir_indices(original: &str, shortened: &str, indices: &[usize]) -> Vec<usize> {
+    if indices.is_empty() || original == shortened {
+        return indices.to_vec();
+    }
+
+    // Figure out how many chars were removed by the ~ substitution
+    let orig_char_count = original.chars().count();
+    let short_char_count = shortened.chars().count();
+    let offset = orig_char_count.saturating_sub(short_char_count);
+
+    // The ~ replaces the home directory prefix. Indices into the home prefix part
+    // map to index 0 (~). Indices after the prefix shift left by offset.
+    indices
+        .iter()
+        .filter_map(|&idx| {
+            if idx < offset {
+                // This character was in the home dir prefix, now replaced by ~
+                // Map to 0 (the ~ char) but deduplicate
+                Some(0)
+            } else {
+                // Shift left by (offset - 1) since ~ takes 1 char where the prefix took more
+                // But actually: original[offset..] == shortened[1..], so char at original idx
+                // maps to idx - offset + 1
+                let new_idx = idx - offset + 1;
+                if new_idx < short_char_count {
+                    Some(new_idx)
+                } else {
+                    None
+                }
+            }
+        })
+        .collect()
 }
 
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
