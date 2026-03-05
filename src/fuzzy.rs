@@ -9,38 +9,35 @@ pub struct ScoredSession {
     pub score: i64,
 }
 
-/// Filter and score sessions by fuzzy matching on the given fields.
-///
-/// - `query`: the fuzzy search string
-/// - `match_title`: whether to match against the session title
-/// - `match_dir`: whether to match against the session directory
-///
+/// Filter and score sessions by fuzzy matching against both title and directory.
 /// Returns sessions sorted by descending score (best match first).
-pub fn filter_sessions(
-    sessions: Vec<Session>,
-    query: &str,
-    match_title: bool,
-    match_dir: bool,
-) -> Vec<ScoredSession> {
+/// If query is empty, returns all sessions in their original order.
+pub fn filter_sessions(sessions: &[Session], query: &str) -> Vec<ScoredSession> {
+    if query.is_empty() {
+        return sessions
+            .iter()
+            .enumerate()
+            .map(|(i, s)| ScoredSession {
+                session: s.clone(),
+                score: -(i as i64), // preserve original order
+            })
+            .collect();
+    }
+
     let matcher = SkimMatcherV2::default();
 
     let mut scored: Vec<ScoredSession> = sessions
-        .into_iter()
+        .iter()
         .filter_map(|session| {
-            let title_score = if match_title {
-                matcher.fuzzy_match(&session.title, query).unwrap_or(0)
-            } else {
-                0
-            };
-            let dir_score = if match_dir {
-                matcher.fuzzy_match(&session.directory, query).unwrap_or(0)
-            } else {
-                0
-            };
+            let title_score = matcher.fuzzy_match(&session.title, query).unwrap_or(0);
+            let dir_score = matcher.fuzzy_match(&session.directory, query).unwrap_or(0);
 
             let score = title_score.max(dir_score);
             if score > 0 {
-                Some(ScoredSession { session, score })
+                Some(ScoredSession {
+                    session: session.clone(),
+                    score,
+                })
             } else {
                 None
             }
