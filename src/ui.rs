@@ -120,7 +120,7 @@ fn draw_input(frame: &mut Frame, app: &App, area: Rect) {
         ""
     };
     let dim = Style::default().fg(Color::DarkGray);
-    let active = Style::default().fg(SELECTED_BG);
+    let active = Style::default().fg(Color::Magenta);
     let hint = Line::from(vec![
         Span::styled(
             "title:",

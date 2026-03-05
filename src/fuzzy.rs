@@ -31,11 +31,11 @@ pub struct ScoredSession {
 /// Returns the match field and the remaining query text.
 pub fn parse_query(raw: &str) -> (MatchField, &str) {
     if let Some(rest) = raw.strip_prefix("title:") {
-        (MatchField::Title, rest)
+        (MatchField::Title, rest.trim_start())
     } else if let Some(rest) = raw.strip_prefix("mes:") {
-        (MatchField::Message, rest)
+        (MatchField::Message, rest.trim_start())
     } else if let Some(rest) = raw.strip_prefix("dir:") {
-        (MatchField::Directory, rest)
+        (MatchField::Directory, rest.trim_start())
     } else {
         (MatchField::All, raw)
     }
