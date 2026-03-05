@@ -9,7 +9,7 @@ pub struct ScoredSession {
     pub score: i64,
 }
 
-/// Filter and score sessions by fuzzy matching against both title and directory.
+/// Filter and score sessions by fuzzy matching against title, directory, and last message.
 /// Returns sessions sorted by descending score (best match first).
 /// If query is empty, returns all sessions in their original order.
 pub fn filter_sessions(sessions: &[Session], query: &str) -> Vec<ScoredSession> {
@@ -31,8 +31,9 @@ pub fn filter_sessions(sessions: &[Session], query: &str) -> Vec<ScoredSession> 
         .filter_map(|session| {
             let title_score = matcher.fuzzy_match(&session.title, query).unwrap_or(0);
             let dir_score = matcher.fuzzy_match(&session.directory, query).unwrap_or(0);
+            let msg_score = matcher.fuzzy_match(&session.last_input, query).unwrap_or(0);
 
-            let score = title_score.max(dir_score);
+            let score = title_score.max(dir_score).max(msg_score);
             if score > 0 {
                 Some(ScoredSession {
                     session: session.clone(),

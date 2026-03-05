@@ -65,8 +65,8 @@ fn draw_input(frame: &mut Frame, app: &App, area: Rect) {
 
 fn draw_table(frame: &mut Frame, app: &App, area: Rect) {
     let header = Row::new(vec![
-        Cell::from("Session ID"),
         Cell::from("Title"),
+        Cell::from("Last Message"),
         Cell::from("Directory"),
         Cell::from("Date"),
     ])
@@ -92,8 +92,8 @@ fn draw_table(frame: &mut Frame, app: &App, area: Rect) {
                 Style::default()
             };
             Row::new(vec![
-                Cell::from(s.id.clone()),
                 Cell::from(s.title.clone()),
+                Cell::from(s.last_input.clone()),
                 Cell::from(shorten_path(&s.directory)),
                 Cell::from(format_date(s.time_created)),
             ])
@@ -102,7 +102,7 @@ fn draw_table(frame: &mut Frame, app: &App, area: Rect) {
         .collect();
 
     let widths = [
-        Constraint::Length(30),
+        Constraint::Fill(1),
         Constraint::Fill(1),
         Constraint::Length(40),
         Constraint::Length(16),
