@@ -2,11 +2,33 @@
 
 Lists all the [Opencode](https://opencode.ai/) sessions across all folders and lets you fuzzy search. Has columns for title, last message, directory and date.
 
-## Usage
+## Installation
+
+### Cargo
 
 ```
 cargo install --git https://github.com/kasbah/opencode-session-search
 ```
+
+### Nix
+
+```shell
+nix run github:kasbah/opencode-session-search
+```
+
+Or add to your flake inputs:
+
+```nix
+inputs.opencode-session-search.url = "github:kasbah/opencode-session-search";
+```
+
+Then add it to your packages, e.g. in `home.packages` or `environment.systemPackages`:
+
+```nix
+inputs.opencode-session-search.packages.${system}.default
+```
+
+## Usage
 
 ```
 opencode-session-search
